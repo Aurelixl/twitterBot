@@ -47,8 +47,8 @@ def store_last_tweets(File, last_tweets_id):    #Methode zum Speichern der letzt
     file_write.close()                          #schließen der Datei
     return
 
-def get_Number(FileN):
-    file_read = open(FileN, "r")
+def get_Number(FileN):                              #Da der Bot keinen Tweet doppelt posten darf, wird immer eine Ziffer angefügt,
+    file_read = open(FileN, "r")                    #damit der Tweet etwas abweicht, falls er erneut zu einem Thema twittert
     currNumber = int(file_read.read().strip())
     file_read.close()
     return currNumber
@@ -67,9 +67,9 @@ def reply():
         read_last_tweets(File), tweet_mode="extended")  #Überprüfung, welche Tweets schon bearbeitet wurden
     for tweet in reversed(tweets):                      #schleife in der tweets aus der Timeline vom ersten,
                                                             #noch nicht bearbeiteten Tweet an gelesen werden
-                text = tweet.full_text                                              #alle Wörter, die nicht auf Wikipedia gesucht werden sollen werden
+                text = tweet.full_text
 
-                search = ''.join([ word for word in text.split() if not word.startswith('@') ])
+                search = ''.join([ word for word in text.split() if not word.startswith('@') ]) #Erwähnungen aus dem String entfernen
                 print("{}: search for:".format(now[1]) + search)
                 logging.info("{}: search for:".format(now[1]) + search)
                 list = wiki_API(search)                               #list ist ein Array dessen Inhalt die Rückgabe der Methode wiki_API beinhaltet
@@ -87,7 +87,7 @@ def reply():
                     response = " Artikel ist für Twitter zu lang. Hier der Link: "      #der erste Satz von Wikipedia genommen wurde
                 api.update_status("@" + tweet.user.screen_name +                        #Verfassen der Antwort mit URL und Wiki-Text
                                   " " + response + " #{}".format(get_Number(FileN)) + "\n" + url, tweet.id)
-                status = api.get_status(tweet.id)                                       #der Rest ist Gleich zu den Anderen Beispielen wie "Hallo"
+                status = api.get_status(tweet.id)
                 favorited = status.favorited
                 if favorited == False:
                     api.create_favorite(tweet.id)
@@ -98,7 +98,6 @@ def reply():
                 currNumber = get_Number(FileN)
                 currNumber += 1
                 set_Number(FileN, currNumber)
-                #main()                                                 #zurückkehren zur main Methode, um Schleife zu durchbrechen
                 return
 
 def follow():
