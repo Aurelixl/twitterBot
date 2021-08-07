@@ -1,7 +1,34 @@
-from bs4 import BeautifulSoup
+#!/usr/bin/env python3
 import wikipedia
-import re
-exit =True
+
+def wiki_API(search):
+    wikipedia.set_lang("de")
+    try:
+        try:
+            print("1")
+            text = wikipedia.summary(search, sentences=10)
+            url0 = wikipedia.page(search)
+        except:
+            print("2")
+            #searchlist = wikipedia.search(search)
+            #search = searchlist[0]
+            text = wikipedia.summary(search, sentences=10, auto_suggest=False)
+            url0 = wikipedia.page(search,auto_suggest=False)
+        text = bracket(text)
+    except:
+        url="https://www.wikipedia.de/"
+        text="Leider nichts gefunden. Gegebenenfalls auf die Rechtschreibung achten."
+
+    print("3")
+    if len(text) > 200:
+        subText = text[0:200]
+        text = subText +"..."
+    try:
+        url = url0.url
+    except:
+        pass
+
+    return [text, url]
 
 def bracket(text):
     string=text
@@ -33,35 +60,3 @@ def bracket(text):
             result1 += ch
 
     return(result1)
-
-
-wikipedia.set_lang("de")
-search = input("suche:")
-print(search)
-
-try:
-    try:
-        print("1")
-        text = wikipedia.summary(search, sentences=10)
-        url0 = wikipedia.page(search)
-    except:
-        print("2")
-        #searchlist = wikipedia.search(search)
-        #search = searchlist[0]
-        text = wikipedia.summary(search, sentences=10, auto_suggest=False)
-        url0 = wikipedia.page(search,auto_suggest=False)
-    text = bracket(text)
-except:
-    url="https://www.wikipedia.de/"
-    text="Leider nichts gefunden. Gegebenenfalls auf die Rechtschreibung achten."
-
-if len(text) > 200:                                 #wenn Zusammenfassung zu lang ist, wird nur der erste Satz genommen
-    subText = text[0:200]
-    text = subText +"..."                      #Emittlung der URL des Artikels
-try:
-    url = url0.url
-except:
-    pass
-
-print(text)
-print(url)

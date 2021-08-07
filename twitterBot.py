@@ -5,24 +5,33 @@
 #!/usr/bin/env python3
 import wikipedia
 import tweepy
+from wikipedia_API import *
 from credentials import*
 import time
 import datetime
 import re
-#from googletrans import Translator
+import sys
+import logging
 
 auth = tweepy.OAuthHandler(API_key, API_secret_key)
 auth.set_access_token(Access_token, Access_token_secret)
 api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
-exit = True
 step = True
-timer = 90
-i = 89
-j = 0
-date = datetime.datetime.now()
-
 File = 'last_tweets.txt'
+
+def date():
+    date = datetime.date.today()
+    timenow = datetime.datetime.now()
+    timenow = timenow.strftime("%H:%M:%S")
+
+    return [date,timenow]
+
+now = date()
+logging.root.handlers = []
+logging.basicConfig(level=logging.INFO,
+                    format="[%(levelname)-5.5s]  %(message)s",
+                    handlers=[logging.FileHandler("logs/{}.log".format(now[0]))])
 
 def read_last_tweets(File):                         #Methode mit Parameter File in der die letzte Tweet ID gespeichert wurde
     file_read = open(File, "r")                     #öffnen der .txt Datei zum Lesen
@@ -38,67 +47,12 @@ def store_last_tweets(File, last_tweets_id):    #Methode zum Speichern der letzt
     return
 
 
-def wiki_API(search):
-    wikipedia.set_lang("de")
-    try:
-        try:
-            print("1")
-            text = wikipedia.summary(search, sentences=10)
-            url0 = wikipedia.page(search)
-        except:
-            print("2")
-            #searchlist = wikipedia.search(search)
-            #search = searchlist[0]
-            text = wikipedia.summary(search, sentences=10, auto_suggest=False)
-            url0 = wikipedia.page(search,auto_suggest=False)
-        text = bracket(text)
-    except:
-        url="https://www.wikipedia.de/"
-        text="Leider nichts gefunden. Gegebenenfalls auf die Rechtschreibung achten."
 
-    if len(text) > 200:
-        subText = text[0:200]
-        text = subText +"..."
-    try:
-        url = url0.url
-    except:
-        pass
-
-    return [text, url]
-
-def bracket(text):
-    string=text
-    result = ''
-    result1=''
-    paren= 0
-    for ch in string:
-        if ch == '(':
-            paren =paren+ 1
-            result = result + '(...'
-
-        elif (ch == ')') and paren:
-            result = result + ')'
-            paren =paren- 1
-
-        elif not paren:
-            result += ch
-    paren= 0
-    for ch in result:
-        if ch == '[':
-            paren =paren+ 1
-            result1 = result1 + '[...'
-
-        elif (ch == ']') and paren:
-            result1 = result1 + ']'
-            paren =paren- 1
-
-        elif not paren:
-            result1 += ch
-
-    return(result1)
 
 def reply():
-    print("checking for mentions...")
+    now = date()
+    print("{}: checking for mentions...".format(now[1]))
+    logging.info("{}: checking for mentions...".format(now[1]))
     tweets = api.mentions_timeline(                     #die Tweets der eigenen Timeline werden aufgerufen
         read_last_tweets(File), tweet_mode="extended")  #Überprüfung, welche Tweets schon bearbeitet wurden
     for tweet in reversed(tweets):                      #schleife in der tweets aus der Timeline vom ersten,
@@ -108,13 +62,19 @@ def reply():
                     search = text.replace("@WikiBotpy ", "")
                 except:
                     search = text.replace("@WikiBotpy", "")
-                print("search for:" + search)
+                print("{}: search for:".format(now[1]) + search)
+                logging.info("{}: search for:".format(now[1]) + search)
                 list = wiki_API(search)                               #list ist ein Array dessen Inhalt die Rückgabe der Methode wiki_API beinhaltet
                 response = list[0]                                    #Antworttext von Wikipedia
                 url = list[1]
-                print(str(tweet.id) + " - " + tweet.full_text +       #Verfassen einer Antwort mit Text von Wikipedia und der URL
+
+                print("{}: ".format(now[1]) + str(tweet.id) + " - " + tweet.full_text +       #Verfassen einer Antwort mit Text von Wikipedia und der URL
                       " from " + tweet.user.screen_name)
-                print("tweeting...", end='')
+                logging.info("{}: ".format(now[1]) + str(tweet.id) + " - " + tweet.full_text +       #Verfassen einer Antwort mit Text von Wikipedia und der URL
+                      " from " + tweet.user.screen_name)
+                print("{}: tweeting...".format(now[1]), end='', flush=True)
+                logging.info("{}: tweeting...".format(now[1]))
+
                 if len(tweet.user.screen_name) + len(response) + len(url) + 3 > 280:    #wenn die Länge des Tweets insgesamt zu lang ist obwohl nur
                     response = " Artikel ist für Twitter zu lang. Hier der Link: "      #der erste Satz von Wikipedia genommen wurde
                 api.update_status("@" + tweet.user.screen_name +                        #Verfassen der Antwort mit URL und Wiki-Text
@@ -125,33 +85,43 @@ def reply():
                     api.create_favorite(tweet.id)
                 time.sleep(2)
                 print("success.")
+                logging.info("success, content: " + response)
                 store_last_tweets(File, tweet.id)
-                main()                                                 #zurückkehren zur main Methode, um Schleife zu durchbrechen
+                #main()                                                 #zurückkehren zur main Methode, um Schleife zu durchbrechen
+                return
 
 def follow():
-    print("checking for new followers...")
+    now = date()
+    print("{}: checking for new followers...".format(now[1]))
+    logging.info("{}: checking for new followers...".format(now[1]))
     for follower in tweepy.Cursor(api.followers).items():   #Aufrufen der Follower über Tweepy
         if not follower.following:                          #wenn einem Follower nicht gefolgt wird, dann:
             follower.follow()                                   #wird er zurückgefolgt
             print("followed " + follower.screen_name)       #Ausgabe des Namens des Followers
+            logging.info("followed " + follower.screen_name)
 
+def timer():
+    timer = 0
+    while timer != 12:
+        time.sleep(1)
+        timer += 1
+        print("* ", end="", flush=True)
+    print("\n", end = "")
+    return True
 
 def main():
-    timer = 90              #ein Timer, der 15 min. zählt (90x(5+5))/ 60= 15
-    i = 89                  #als Variable, die alle 10 sek. zählt
+    timer15min = 900
     step = True
-    print("running...")
+    now = date()
+    print("{}: running...".format(now[1]))
+    logging.info("{}: running...".format(now[1]))
     while step:
-        i = i+1
-        reply()             #Methode zum Verfassen von Tweets und Überprüfung von Erwähnungen
-        time.sleep(10)       #5 sek. warten, da Twitter ein "rate limit" festgelegt hat
-        print("*")
-        if i == 45:
-            print("waiting...")
-        if i == timer:      #wenn 15 min. um, dann Überprüfung auf neue Follower (rate limit)
-            follow()        #Methode zum Zurückfolgen
-            i = 0
-        time.sleep(5)       #erneut warten
+        if timer():
+            reply()
+            if timer15min==900:
+                follow()
+                timer15min = 0
+            timer15min += 12
 
 if __name__ == "__main__":
     main()
