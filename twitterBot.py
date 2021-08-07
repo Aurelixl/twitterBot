@@ -19,6 +19,7 @@ api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 step = True
 File = 'last_tweets.txt'
+FileN = "number.txt"
 
 def date():
     date = datetime.date.today()
@@ -46,8 +47,17 @@ def store_last_tweets(File, last_tweets_id):    #Methode zum Speichern der letzt
     file_write.close()                          #schließen der Datei
     return
 
+def get_Number(FileN):
+    file_read = open(FileN, "r")
+    currNumber = int(file_read.read().strip())
+    file_read.close()
+    return currNumber
 
-
+def set_Number(FileN, currNumber):
+    file_write = open(FileN, "w")
+    file_write.write(str(currNumber))
+    file_write.close()
+    return
 
 def reply():
     now = date()
@@ -58,10 +68,8 @@ def reply():
     for tweet in reversed(tweets):                      #schleife in der tweets aus der Timeline vom ersten,
                                                             #noch nicht bearbeiteten Tweet an gelesen werden
                 text = tweet.full_text                                              #alle Wörter, die nicht auf Wikipedia gesucht werden sollen werden
-                try:
-                    search = text.replace("@WikiBotpy ", "")
-                except:
-                    search = text.replace("@WikiBotpy", "")
+
+                search = ''.join([ word for word in text.split() if not word.startswith('@') ])
                 print("{}: search for:".format(now[1]) + search)
                 logging.info("{}: search for:".format(now[1]) + search)
                 list = wiki_API(search)                               #list ist ein Array dessen Inhalt die Rückgabe der Methode wiki_API beinhaltet
@@ -78,7 +86,7 @@ def reply():
                 if len(tweet.user.screen_name) + len(response) + len(url) + 3 > 280:    #wenn die Länge des Tweets insgesamt zu lang ist obwohl nur
                     response = " Artikel ist für Twitter zu lang. Hier der Link: "      #der erste Satz von Wikipedia genommen wurde
                 api.update_status("@" + tweet.user.screen_name +                        #Verfassen der Antwort mit URL und Wiki-Text
-                                  " " + response + " \n " + url, tweet.id)
+                                  " " + response + " #{}".format(get_Number(FileN)) + "\n" + url, tweet.id)
                 status = api.get_status(tweet.id)                                       #der Rest ist Gleich zu den Anderen Beispielen wie "Hallo"
                 favorited = status.favorited
                 if favorited == False:
@@ -87,6 +95,9 @@ def reply():
                 print("success.")
                 logging.info("success, content: " + response)
                 store_last_tweets(File, tweet.id)
+                currNumber = get_Number(FileN)
+                currNumber += 1
+                set_Number(FileN, currNumber)
                 #main()                                                 #zurückkehren zur main Methode, um Schleife zu durchbrechen
                 return
 
